@@ -6,6 +6,7 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
     
     class CameraView: UIView {
         var videoPreviewLayer:AVCaptureVideoPreviewLayer?
+        let simulatorDebug = false
         
         func interfaceOrientationToVideoOrientation(_ orientation : UIInterfaceOrientation) -> AVCaptureVideoOrientation {
             switch (orientation) {
@@ -26,7 +27,7 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
             super.layoutSubviews();
             if let sublayers = self.layer.sublayers {
                 for layer in sublayers {
-                    layer.frame = self.bounds;
+//                    layer.frame = self.bounds;
                 }
             }
             
@@ -35,9 +36,51 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
         
         
         func addPreviewLayer(_ previewLayer:AVCaptureVideoPreviewLayer?) {
-            previewLayer!.videoGravity = AVLayerVideoGravity.resizeAspectFill
-            previewLayer!.frame = self.bounds
-            self.layer.addSublayer(previewLayer!)
+           
+//            previewLayer!.frame = self.bounds
+            var container:UIView = UIView(frame: CGRect(x: 20, y: 130, width: UIScreen.main.bounds.width - 40, height: 320))
+            container.backgroundColor = UIColor.white
+            container.layer.cornerRadius = 4
+//            container.layer.borderColor = UIColor.gray.cgColor
+            container.layer.borderColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.05).cgColor
+            container.layer.borderWidth = 2
+            
+            container.layer.shadowColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.1).cgColor
+            container.layer.shadowOpacity = 0.5
+            container.layer.shadowOffset = CGSize(width:0, height:2)
+            container.layer.shadowRadius = 4
+
+            
+            self.addSubview(container)
+            
+            var line1:UIView = UIView(frame: CGRect(x: 0, y: 60, width: container.bounds.width, height: 1))
+            line1.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.1)
+            
+            container.addSubview(line1)
+            
+            var line2:UIView = UIView(frame: CGRect(x: 0, y: 260, width: container.bounds.width, height: 1))
+            line2.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.1)
+            
+            var title:UILabel = UILabel(frame: CGRect(x: 20, y: 10, width: container.bounds.width-40, height: 40))
+            container.addSubview(title)
+            title.text = "Speler 3"
+            title.textColor = UIColor.black
+            title.textAlignment = NSTextAlignment.left
+            
+            var backbutton: UIButton = UIButton(frame: CGRect(x: 20, y: 270, width: 56, height: 40))
+            backbutton.backgroundColor = UIColor(red: 0x70/255.0, green: 0xbd/255.0, blue: 0x17/255.0, alpha: 0.9)
+            backbutton.layer.cornerRadius = 4
+            backbutton.setTitle("←", for: .normal)
+            backbutton.titleLabel?.font = UIFont.systemFont(ofSize: 23)
+//            backbutton.setTitleColor(<#T##color: UIColor?##UIColor?#>, for: <#T##UIControlState#>)
+            backbutton.tintColor = UIColor.blue
+            container.addSubview(backbutton)
+            container.addSubview(line2)
+            if (previewLayer != nil) {
+                previewLayer!.videoGravity = AVLayerVideoGravity.resizeAspectFill
+                previewLayer!.frame = CGRect(x: 0, y:60, width: container.bounds.width, height: 200)
+            }
+            container.layer.addSublayer(previewLayer!)
             self.videoPreviewLayer = previewLayer;
         }
         
@@ -122,6 +165,14 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
 
     @objc func prepScanner(command: CDVInvokedUrlCommand) -> Bool{
         let status = AVCaptureDevice.authorizationStatus(for: AVMediaType.video)
+        
+        if (cameraView.simulatorDebug) {
+            cameraView.backgroundColor = UIColor.clear
+            self.webView!.superview!.insertSubview(cameraView, belowSubview: self.webView!)
+            cameraView.addPreviewLayer(captureVideoPreviewLayer)
+
+        }
+        
         if (status == AVAuthorizationStatus.restricted) {
             self.sendErrorCode(command: command, error: QRScannerError.camera_access_restricted)
             return false
@@ -129,6 +180,7 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
             self.sendErrorCode(command: command, error: QRScannerError.camera_access_denied)
             return false
         }
+        
         do {
             if (captureSession?.isRunning != true){
                 cameraView.backgroundColor = UIColor.clear
@@ -255,6 +307,10 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
 
     @objc func prepare(_ command: CDVInvokedUrlCommand){
         let status = AVCaptureDevice.authorizationStatus(for: AVMediaType.video)
+        if (cameraView.simulatorDebug) {
+            self.prepScanner(command: command)
+        }
+        
         if (status == AVAuthorizationStatus.notDetermined) {
             // Request permission before preparing scanner
             AVCaptureDevice.requestAccess(for: AVMediaType.video, completionHandler: { (granted) -> Void in
@@ -468,7 +524,7 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
 
     @objc func openSettings(_ command: CDVInvokedUrlCommand) {
         if #available(iOS 10.0, *) {
-            guard let settingsUrl = URL(string: UIApplication.openSettingsURLString) else {
+            guard let settingsUrl = URL(string: UIApplicationOpenSettingsURLString) else {
             return
         }
         if UIApplication.shared.canOpenURL(settingsUrl) {
@@ -481,7 +537,7 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
         } else {
             // pre iOS 10.0
             if #available(iOS 8.0, *) {
-                UIApplication.shared.openURL(NSURL(string: UIApplication.openSettingsURLString)! as URL)
+                UIApplication.shared.openURL(NSURL(string: UIApplicationOpenSettingsURLString)! as URL)
                 self.getStatus(command)
             } else {
                 self.sendErrorCode(command: command, error: QRScannerError.open_settings_unavailable)
@@ -489,3 +545,4 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
         }
     }
 }
+
