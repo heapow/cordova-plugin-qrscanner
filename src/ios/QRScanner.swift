@@ -7,6 +7,8 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
     class CameraView: UIView {
         var videoPreviewLayer:AVCaptureVideoPreviewLayer?
         let simulatorDebug = false
+        var container:UIView = UIView()
+        var backbutton: UIButton!
         
         func interfaceOrientationToVideoOrientation(_ orientation : UIInterfaceOrientation) -> AVCaptureVideoOrientation {
             switch (orientation) {
@@ -38,17 +40,17 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
         func addPreviewLayer(_ previewLayer:AVCaptureVideoPreviewLayer?) {
            
 //            previewLayer!.frame = self.bounds
-            var container:UIView = UIView(frame: CGRect(x: 20, y: 130, width: UIScreen.main.bounds.width - 40, height: 320))
+            container = UIView(frame: CGRect(x: 20, y: 130, width: UIScreen.main.bounds.width - 40, height: 320))
             container.backgroundColor = UIColor.white
-            container.layer.cornerRadius = 4
-//            container.layer.borderColor = UIColor.gray.cgColor
-            container.layer.borderColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.05).cgColor
-            container.layer.borderWidth = 2
-            
-            container.layer.shadowColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.1).cgColor
-            container.layer.shadowOpacity = 0.5
-            container.layer.shadowOffset = CGSize(width:0, height:2)
-            container.layer.shadowRadius = 4
+//            container.layer.cornerRadius = 4
+////            container.layer.borderColor = UIColor.gray.cgColor
+//            container.layer.borderColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.05).cgColor
+//            container.layer.borderWidth = 2
+//
+//            container.layer.shadowColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.1).cgColor
+//            container.layer.shadowOpacity = 0.5
+//            container.layer.shadowOffset = CGSize(width:0, height:2)
+//            container.layer.shadowRadius = 4
 
             
             self.addSubview(container)
@@ -56,26 +58,27 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
             var line1:UIView = UIView(frame: CGRect(x: 0, y: 60, width: container.bounds.width, height: 1))
             line1.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.1)
             
-            container.addSubview(line1)
+//            container.addSubview(line1)
             
             var line2:UIView = UIView(frame: CGRect(x: 0, y: 260, width: container.bounds.width, height: 1))
             line2.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.1)
             
             var title:UILabel = UILabel(frame: CGRect(x: 20, y: 10, width: container.bounds.width-40, height: 40))
-            container.addSubview(title)
+//            container.addSubview(title)
             title.text = "Speler 3"
             title.textColor = UIColor.black
             title.textAlignment = NSTextAlignment.left
             
-            var backbutton: UIButton = UIButton(frame: CGRect(x: 20, y: 270, width: 56, height: 40))
+            backbutton = UIButton(frame: CGRect(x: 20, y: 270, width: 56, height: 40))
             backbutton.backgroundColor = UIColor(red: 0x70/255.0, green: 0xbd/255.0, blue: 0x17/255.0, alpha: 0.9)
             backbutton.layer.cornerRadius = 4
             backbutton.setTitle("←", for: .normal)
             backbutton.titleLabel?.font = UIFont.systemFont(ofSize: 23)
 //            backbutton.setTitleColor(<#T##color: UIColor?##UIColor?#>, for: <#T##UIControlState#>)
             backbutton.tintColor = UIColor.blue
-            container.addSubview(backbutton)
-            container.addSubview(line2)
+            backbutton.addTarget(self.superview, action: #selector(backEvent2), for: .touchUpInside)
+//            container.addSubview(backbutton)
+//            container.addSubview(line2)
             if (previewLayer != nil) {
                 previewLayer!.videoGravity = AVLayerVideoGravity.resizeAspectFill
                 previewLayer!.frame = CGRect(x: 0, y:60, width: container.bounds.width, height: 200)
@@ -85,6 +88,10 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
         }
         
         func removePreviewLayer() {
+            DispatchQueue.main.async {
+                self.container.removeFromSuperview()
+                    }
+            
             if self.videoPreviewLayer != nil {
                 self.videoPreviewLayer!.removeFromSuperlayer()
                 self.videoPreviewLayer = nil
@@ -132,8 +139,15 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(pageDidLoad), name: NSNotification.Name.CDVPageDidLoad, object: nil)
         self.cameraView = CameraView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
         self.cameraView.autoresizingMask = [.flexibleWidth, .flexibleHeight];
+        
     }
-
+    @objc func backEvent2() {
+        if (nextScanningCommand != nil){
+            let pluginResult = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: "")
+            commandDelegate!.send(pluginResult, callbackId: nextScanningCommand?.callbackId!)
+            nextScanningCommand = nil
+        }
+    }
     func sendErrorCode(command: CDVInvokedUrlCommand, error: QRScannerError){
         let pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: error.rawValue)
         commandDelegate!.send(pluginResult, callbackId:command.callbackId)
@@ -169,8 +183,11 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
         if (cameraView.simulatorDebug) {
             cameraView.backgroundColor = UIColor.clear
             self.webView!.superview!.insertSubview(cameraView, belowSubview: self.webView!)
+//            self.webView!.superview!.insertSubview(cameraView, aboveSubview: self.webView!)
+//            self.webView!.addSubview(cameraView)
             cameraView.addPreviewLayer(captureVideoPreviewLayer)
-
+            
+            
         }
         
         if (status == AVAuthorizationStatus.restricted) {
@@ -208,6 +225,7 @@ class QRScanner : CDVPlugin, AVCaptureMetadataOutputObjectsDelegate {
                 metaOutput!.metadataObjectTypes = [AVMetadataObject.ObjectType.qr]
                 captureVideoPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession!)
                 cameraView.addPreviewLayer(captureVideoPreviewLayer)
+//                self.cameraView.backbutton.addTarget(self, action: #selector(backEvent), for: .touchUpInside)
                 captureSession!.startRunning()
             }
             return true
