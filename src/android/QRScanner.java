@@ -463,7 +463,8 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
                 settings.setRequestedCameraId(getCurrentCameraId());
                 mBarcodeView.setCameraSettings(settings);
 
-                FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+                // FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+                FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(50, 50);
                 ((ViewGroup) webView.getView().getParent()).addView(mBarcodeView, cameraPreviewParams);
 
                 cameraPreviewing = true;
@@ -782,6 +783,20 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
                 }
             });
         }
+        this.cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+              webView.getView().setBackgroundColor(Color.argb(255, 255, 255, 255));
+              try {
+                if (qrLayout != null) {
+                  ((ViewGroup)qrLayout.getParent()).removeView(qrLayout);
+                }
+                ((ViewGroup) mBarcodeView.getParent()).removeView(mBarcodeView);
+                cameraPreviewing = false;
+    
+              } catch (Throwable t){}
+            }
+          });
         if(currentCameraId != Camera.CameraInfo.CAMERA_FACING_FRONT) {
             if (lightOn)
                 switchFlash(false, callbackContext);
