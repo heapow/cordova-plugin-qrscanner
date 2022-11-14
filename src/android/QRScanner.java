@@ -446,6 +446,14 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
             return false;
         }
     }
+    private int dp2px(int dp) {
+        Resources r = cordova.getActivity().getResources();
+        return (int)TypedValue.applyDimension(
+          TypedValue.COMPLEX_UNIT_DIP,
+          dp,
+          r.getDisplayMetrics()
+        );
+      }
     private void setupCamera(CallbackContext callbackContext) {
         cordova.getActivity().runOnUiThread(new Runnable() {
             @Override
@@ -464,7 +472,7 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
                 mBarcodeView.setCameraSettings(settings);
 
                 // FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-                FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(50, 50);
+                FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(dp2px(200), dp2px(200));
                 ((ViewGroup) webView.getView().getParent()).addView(mBarcodeView, cameraPreviewParams);
 
                 cameraPreviewing = true;
