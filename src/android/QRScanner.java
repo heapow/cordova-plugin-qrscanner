@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.FeatureInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.hardware.camera2.CameraAccessException;
 import android.net.Uri;
@@ -19,20 +20,19 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.PluginResult;
 import org.apache.cordova.PermissionHelper;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 import android.hardware.Camera;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
+import android.util.TypedValue;
 import android.view.ViewGroup;
+import android.webkit.ValueCallback;
 import android.widget.FrameLayout;
+import android.widget.RelativeLayout;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
-
 
 @SuppressWarnings("deprecation")
 public class QRScanner extends CordovaPlugin implements BarcodeCallback {
@@ -470,10 +470,18 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
                 CameraSettings settings = new CameraSettings();
                 settings.setRequestedCameraId(getCurrentCameraId());
                 mBarcodeView.setCameraSettings(settings);
+                RelativeLayout qrLayout = new RelativeLayout(cordova.getActivity());
+                qrLayout.setBackgroundColor(Color.argb(255, 255, 255, 255));
+                RelativeLayout.LayoutParams qrLayoutParams = new RelativeLayout.LayoutParams(dp2px(361), dp2px(214));
 
-                // FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-                FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(dp2px(200), dp2px(200));
-                ((ViewGroup) webView.getView().getParent()).addView(mBarcodeView, cameraPreviewParams);
+                FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+                // FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(dp2px(200), dp2px(200));
+                // ((ViewGroup) webView.getView().getParent()).addView(mBarcodeView, cameraPreviewParams);
+                qrLayoutParams.setMargins(dp2px(16), dp2px(131), dp2px(0), dp2px(0));
+
+//              ((ViewGroup) webView.getView().getParent()).addView(mBarcodeView, cameraPreviewParams);
+                ((ViewGroup) webView.getView().getParent()).addView(qrLayout, cameraPreviewParams);
+                qrLayout.addView(mBarcodeView, qrLayoutParams);
 
                 cameraPreviewing = true;
                 webView.getView().bringToFront();
