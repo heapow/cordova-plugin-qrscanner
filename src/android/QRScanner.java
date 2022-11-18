@@ -20,6 +20,9 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.PluginResult;
 import org.apache.cordova.PermissionHelper;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import android.hardware.Camera;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
@@ -33,6 +36,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
+
 
 @SuppressWarnings("deprecation")
 public class QRScanner extends CordovaPlugin implements BarcodeCallback {
@@ -60,7 +64,8 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
     private boolean oneTime = true;
     private boolean keepDenied = false;
     private boolean appPausedWithActivePreview = false;
-    
+    private RelativeLayout qrLayout = null;
+
     static class QRScannerError {
         private static final int UNEXPECTED_ERROR = 0,
                 CAMERA_ACCESS_DENIED = 1,
@@ -425,7 +430,7 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
         this.cordova.getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                webView.getView().setBackgroundColor(Color.TRANSPARENT);
+//                webView.getView().setBackgroundColor(Color.TRANSPARENT);
             }
         });
         showing = false;
@@ -446,14 +451,16 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
             return false;
         }
     }
+
     private int dp2px(int dp) {
-        Resources r = cordova.getActivity().getResources();
-        return (int)TypedValue.applyDimension(
-          TypedValue.COMPLEX_UNIT_DIP,
-          dp,
-          r.getDisplayMetrics()
-        );
-      }
+      Resources r = cordova.getActivity().getResources();
+      return (int)TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP,
+        dp,
+        r.getDisplayMetrics()
+      );
+    }
+
     private void setupCamera(CallbackContext callbackContext) {
         cordova.getActivity().runOnUiThread(new Runnable() {
             @Override
@@ -470,13 +477,16 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
                 CameraSettings settings = new CameraSettings();
                 settings.setRequestedCameraId(getCurrentCameraId());
                 mBarcodeView.setCameraSettings(settings);
-                RelativeLayout qrLayout = new RelativeLayout(cordova.getActivity());
+
+//                FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+                FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+//              FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(dp2px(200), dp2px(200));
+
+                qrLayout = new RelativeLayout(cordova.getActivity());
                 qrLayout.setBackgroundColor(Color.argb(255, 255, 255, 255));
                 RelativeLayout.LayoutParams qrLayoutParams = new RelativeLayout.LayoutParams(dp2px(361), dp2px(214));
-
-                FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-                // FrameLayout.LayoutParams cameraPreviewParams = new FrameLayout.LayoutParams(dp2px(200), dp2px(200));
-                // ((ViewGroup) webView.getView().getParent()).addView(mBarcodeView, cameraPreviewParams);
+//                qrLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+//                qrLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
                 qrLayoutParams.setMargins(dp2px(16), dp2px(131), dp2px(0), dp2px(0));
 
 //              ((ViewGroup) webView.getView().getParent()).addView(mBarcodeView, cameraPreviewParams);
@@ -487,6 +497,28 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
                 webView.getView().bringToFront();
 
                 mBarcodeView.resume();
+              webView.getEngine().evaluateJavascript("JSON.parse(JSON.stringify(document.querySelector('#qr-section').getBoundingClientRect()));", new ValueCallback<String>() {
+                @Override
+                public void onReceiveValue(String value) {
+                  System.out.println(value);
+                  cordova.getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                      try {
+                        JSONObject json = new JSONObject(value);
+                        RelativeLayout.LayoutParams qrLayoutParams = new RelativeLayout.LayoutParams(dp2px(json.getInt("width")), dp2px(json.getInt("height")));
+                        qrLayoutParams.setMargins(dp2px(json.getInt("left")), dp2px(json.getInt("top")), dp2px(0), dp2px(0));
+                        mBarcodeView.setLayoutParams(qrLayoutParams);
+
+                      } catch (JSONException e) {
+                        e.printStackTrace();
+                      }
+
+                    }
+                  });
+
+                }
+              });
             }
         });
         prepared = true;
@@ -558,14 +590,16 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
             this.cordova.getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    mBarcodeView.pause();
+                    if (mBarcodeView != null)mBarcodeView.pause();
                 }
             });
             if(cameraPreviewing) {
                 this.cordova.getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        ((ViewGroup) mBarcodeView.getParent()).removeView(mBarcodeView);
+                        try {
+                          ((ViewGroup) mBarcodeView.getParent()).removeView(mBarcodeView);
+                        } catch (Throwable t) {}
                         cameraPreviewing = false;
                     }
                 });
@@ -636,7 +670,7 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
         this.cordova.getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                webView.getView().setBackgroundColor(Color.argb(1, 0, 0, 0));
+                webView.getView().setBackgroundColor(Color.argb(0, 0, 0, 0));
                 showing = true;
                 getStatus(callbackContext);
             }
@@ -658,7 +692,7 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
                     if(lightOn)
                         lightOn = false;
                 }
-                
+
                 if (callbackContext != null)
                     getStatus(callbackContext);
             }
@@ -676,7 +710,7 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
                     if(switchFlashOn)
                         lightOn = true;
                 }
-                
+
                 if (callbackContext != null)
                     getStatus(callbackContext);
             }
@@ -799,25 +833,25 @@ public class QRScanner extends CordovaPlugin implements BarcodeCallback {
                 }
             });
         }
-        this.cordova.getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-              webView.getView().setBackgroundColor(Color.argb(255, 255, 255, 255));
-              try {
-                if (qrLayout != null) {
-                  ((ViewGroup)qrLayout.getParent()).removeView(qrLayout);
-                }
-                ((ViewGroup) mBarcodeView.getParent()).removeView(mBarcodeView);
-                cameraPreviewing = false;
-    
-              } catch (Throwable t){}
-            }
-          });
         if(currentCameraId != Camera.CameraInfo.CAMERA_FACING_FRONT) {
             if (lightOn)
                 switchFlash(false, callbackContext);
         }
         closeCamera();
+      this.cordova.getActivity().runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          webView.getView().setBackgroundColor(Color.argb(255, 255, 255, 255));
+          try {
+            if (qrLayout != null) {
+              ((ViewGroup)qrLayout.getParent()).removeView(qrLayout);
+            }
+            ((ViewGroup) mBarcodeView.getParent()).removeView(mBarcodeView);
+            cameraPreviewing = false;
+
+          } catch (Throwable t){}
+        }
+      });
         currentCameraId = 0;
         getStatus(callbackContext);
     }
